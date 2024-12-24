@@ -1,0 +1,585 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Open Chat</title>
+  <script type="application/javascript" src="/openchat/client.js"></script>
+</head>
+
+<style>
+  html,
+  body {
+    height: 100%;
+    width: device-width;
+  }
+
+  body {
+    overflow: hidden;
+  }
+
+  pre {
+    background-color: lightgray;
+    border-radius: 12px;
+    padding: 10px;
+    width: fit-content;
+    max-width: 95%;
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+
+  #all {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 100%;
+    width: 100%;
+    gap: 1%;
+  }
+
+  #chatBox {
+    display: flex;
+    width: 99%;
+    gap: 6px;
+    flex-direction: column;
+    max-width: 1000px;
+    margin: auto;
+    max-height: 100%;
+  }
+
+  #left-text {
+    color: black;
+    text-align: center;
+    flex-basis: 180px;
+  }
+
+  #messages {
+    display: flex;
+    width: 99%;
+    gap: 1px;
+    flex-direction: column;
+    overflow: auto;
+    max-height: calc(100% - 100px);
+    word-break: break-word;
+  }
+
+  #send-message {
+    display: flex;
+    width: 100%;
+    gap: 6px;
+  }
+
+  #message-text {
+    background-color: #a6a6a6;
+    color: black;
+    border: 2px solid gray;
+    border-radius: 8px;
+    transition-duration: 0.4s;
+    text-align: center;
+    flex-basis: 100%;
+  }
+
+  #username-text {
+    background-color: #a6a6a6;
+    color: black;
+    border: 2px solid gray;
+    border-radius: 8px;
+    transition-duration: 0.4s;
+    text-align: center;
+    flex-basis: 100%;
+  }
+
+  #send-message-button {
+    background-color: #a6a6a6;
+    color: black;
+    border: 2px solid gray;
+    border-radius: 8px;
+    transition-duration: 0.4s;
+    text-align: center;
+  }
+
+  #user-content {
+    max-height: 450px;
+    max-width: 95%;
+    border-radius: 12px;
+  }
+
+  #user-file {
+    background-color: lightgray;
+    border-radius: 12px;
+    line-height: 1.5rem;
+    max-width: 75%;
+    height: 48px;
+    display: inline-block;
+  }
+
+  #user-file-text {
+    word-break: keep-all;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline;
+    position: relative;
+    bottom: 20px;
+    margin-left: 5px;
+    margin-right: 5px;
+  }
+
+  #user-fileicon {
+    display: inline;
+    width: 48px;
+    height: 48px;
+    margin-left: 5px;
+  }
+</style>
+
+<body>
+  <div id="all">
+    <noscript>JavaScript is disabled.</noscript>
+    <div id="chatBox">
+      <div id="messages"></div>
+      <div id="send-message">
+        <strong id="left-text">username: </strong>
+        <input type="text" id="username-text" />
+      </div>
+      <div id="send-message">
+        <strong id="left-text">message: </strong>
+        <input type="text" id="message-text" />
+      </div>
+      <button id="send-message-button" onclick="sendMessageClicked()">
+        Send Message
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let sendMessageClicked;
+    let userId;
+    let eventSource;
+    let gotFirstMsg;
+    let messagesUsed = [];
+    let curRoom;
+    let nameColor = getCookie("nameColor") || "green";
+    let id = getCookie("id") || Date.now();
+    setCookie("nameColor", nameColor, 9999);
+    setCookie("id", id, 9999);
+
+    sendMessageClicked = async (text) => {
+      let messageText = document.querySelector("#message-text").value.replace(/\s+$/, "") + " ";
+      let username = document.querySelector("#username-text").value.replace(/\s+$/, "");
+
+      if (text) messageText = text;
+
+      if (messageText.startsWith("/help ") || messageText.startsWith("/h ")) {
+        addSystemMessage(`
+        Commands:\n
+        /help | /h                         - Shows this message.\n
+        /clear | /c                        - Clears the chat (locally).\n
+        /room {room-name} | /r {room-name} - Connects to a different room. (Enter 'home' to connect to the home room.)\n
+        /roomlist | /rl                    - Shows a list of all rooms.)\n
+        /color {hex code or color name}    - Sets your name color.\n
+        /colorpicker | /cp                 - Opens a color picker.\n
+        /sendfile | /sf                    - Upload a file to the chat. (Limit is 32MB.)
+      `);
+        document.querySelector("#message-text").value = "";
+        return;
+      }
+
+      if (messageText.startsWith("/clear ") || messageText.startsWith("/c ")) {
+        var elem = await document.getElementById("messages");
+        elem.childNodes.forEach((c) => {
+          while (c.firstChild) {
+            c.removeChild(c.lastChild);
+          }
+        });
+        document.querySelector("#message-text").value = "";
+        return;
+      }
+
+      if (messageText.startsWith("/room ") || messageText.startsWith("/r ")) {
+        addSystemMessage(`Connecting to room...`);
+        let res = await fetch(`/openchat/api/v1/getRoom?` + new URLSearchParams({ id: messageText.split(" ")[1] }), {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          }
+        });
+        console.log(res);
+        let resJ = await res.json();
+        if (!resJ.success) {
+          console.log(resJ);
+          addSystemMessage(`Error: ${resJ?.err?.message || resJ?.err}`);
+        }
+        if (!resJ.roomExists) {
+          addSystemMessage(`Room does not exist, creating room...`);
+          try {
+            let res2 = await fetch(`/openchat/api/v1/createRoom?` + new URLSearchParams({ id: messageText.split(" ")[1] }), {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              }
+            });
+            let resJ2 = await res2.json();
+            console.log(resJ2);
+            if (!resJ2.success) {
+              console.log(resJ2);
+              addSystemMessage(`Error: ${resJ2.err}`);
+            }
+            if (resJ2.roomId) {
+              if (eventSource) eventSource.close();
+              curRoom = resJ2.roomId;
+              listen();
+              addSystemMessage(`Connected to #${messageText.split(" ")[1]}`);
+              window.history.pushState(null, document.title, `/openchat/room/${messageText.split(" ")[1]}`);
+              start();
+              document.querySelector("#message-text").value = "";
+            }
+          } catch (err) {
+            addSystemMessage(`Error: ${err?.message || err}`);
+          }
+          return;
+        }
+        if (resJ.roomId) {
+          if (eventSource) eventSource.close();
+          curRoom = resJ.roomId;
+          listen();
+          addSystemMessage(`Connected to #${messageText.split(" ")[1]}`);
+          window.history.pushState(null, document.title, `/openchat/room/${messageText.split(" ")[1]}`);
+          start();
+          document.querySelector("#message-text").value = "";
+        }
+        return;
+      }
+      if (messageText.startsWith("/roomlist ") || messageText.startsWith("/rl ")) {
+        let res = await fetch(`/openchat/rooms.json`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        console.log(res);
+        let resJ = await res.json();
+        let roomsString = "avaliable rooms:\n";
+        for (let i in resJ) {
+          roomsString += `${i}, `;
+        }
+        addSystemMessage(roomsString);
+        document.querySelector("#message-text").value = "";
+        return;
+      }
+
+      if (messageText.startsWith("/color ")) {
+        nameColor = messageText.split(" ")[1];
+        setCookie("nameColor", nameColor, 9999);
+        addSystemMessage(
+          `Name color set to <span color="${nameColor}">${nameColor}</span>`,
+        );
+        document.querySelector("#message-text").value = "";
+        return;
+      }
+
+      if (messageText.startsWith("/colorpicker ") || messageText.startsWith("/cp ")) {
+        let clrEl = await document.createElement("input");
+        let elem = document.querySelector("#messages");
+
+        clrEl.type = "color";
+        clrEl.value = nameColor;
+        clrEl.style.display = "none";
+        clrEl.onchange = () => {
+          nameColor = clrEl.value;
+          setCookie("nameColor", nameColor, 9999);
+          addSystemMessage(`Name color set to <span color="${nameColor}">${nameColor}</span>`);
+          clrEl.remove();
+        };
+        clrEl.click();
+
+        elem.appendChild(clrEl);
+        document.querySelector("#message-text").value = "";
+        return;
+      }
+
+      if (messageText.startsWith("/sendfile ") || messageText.startsWith("/sf ")) {
+        let flEl = await document.createElement("input");
+        let elem = document.querySelector("#messages");
+
+        let progressEl = await document.createElement("span");
+        progressEl.style.color = "gray";
+        progressEl.innerHTML = "Waiting for file...";
+        elem.appendChild(progressEl);
+
+        flEl.type = "file";
+        flEl.style.display = "none";
+        flEl.multiple = true;
+        flEl.onchange = async () => {
+          for (index in flEl.files) {
+            let file = flEl.files[index];
+            if (typeof (file) == "object") {
+              let promise = new Promise(async (resolve, reject) => {
+                function a() {
+                  if (file.size > 3.2e+7) {
+                    flEl.remove();
+                    progressEl.remove();
+                    addSystemMessage(`File ${file.name} is too big (${Math.round(file.size / 10000) / 100} MB > 32 MB)`);
+                    resolve();
+                    return;
+                  }
+                  const xhr = new XMLHttpRequest();
+                  xhr.upload.addEventListener("progress", async (e) => {
+                    progressEl.innerHTML = `uploading, ${Math.round((e.loaded / e.total) * 100)}% done`;
+                    if (e.loaded / e.total == 1) {
+                      await pause(1000);
+                      progressEl.innerHTML = `done uploading file`;
+                      await pause(3000);
+                      progressEl.innerHTML = `waiting for server...`;
+                    }
+                  });
+                  xhr.addEventListener("load", async () => {
+                    console.log("file finished");
+                    console.log(xhr.responseText);
+                    if (xhr.status == 429) {
+                      await pause(xhr.getResponseHeader('Retry-After') * 1000);
+                      a();
+                      return;
+                    }
+                    progressEl.innerHTML = `file done uploading!`;
+                    flEl.remove();
+                    await pause(2000);
+                    progressEl.remove();
+                    resolve();
+                  });
+                  xhr.addEventListener("error", async () => {
+                    console.error("File upload failed");
+                    await pause(2000);
+                    a();
+                  });
+                  xhr.addEventListener("abort", () => console.error("File upload aborted"));
+                  xhr.open("POST", `/openchat/api/v1/sendFile/${curRoom}/`, true);
+                  xhr.setRequestHeader("fileName", file.name.replaceAll(/[^a-zA-Z0-9_\- .]/g, ''));
+                  xhr.setRequestHeader("fileSize", file.size);
+                  xhr.setRequestHeader("fileType", file.type);
+                  xhr.setRequestHeader("author", username);
+                  xhr.setRequestHeader("color", nameColor);
+                  xhr.send(file);
+                }
+                a();
+              });
+              await Promise.all([promise]);
+            }
+          }
+        };
+        elem.appendChild(flEl);
+        flEl.click();
+
+        document.querySelector("#message-text").value = "";
+        return;
+      }
+
+      if (messageText.startsWith("/")) {
+        addSystemMessage(`Command "${messageText.split(" ")[0]}" does not exist`);
+        document.querySelector("#message-text").value = "";
+        return;
+      }
+
+      if (username == "" || messageText == "") {
+        return;
+      }
+
+      const message = {
+        author: username,
+        content: messageText,
+        color: nameColor,
+        id,
+      };
+
+      console.log(message);
+      document.querySelector("#message-text").value = "";
+      try {
+        let res = await fetch(`/openchat/api/v1/sendMessage/${curRoom}`, {
+          method: "POST",
+          body: JSON.stringify(message),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        console.log(res);
+        if (res.status != 200) {
+          let body;
+          try {
+            body = await res.json();
+          } catch (err) {
+            body = { err: err?.message || err };
+          }
+          addSystemMessage(`Error: ${body.err}`);
+        }
+      } catch (err) {
+        addSystemMessage(`Error: ${err}`);
+      }
+    };
+
+    sendMessageClicked(`/room ${window.location.pathname.split("/openchat/room/")[1] || "home"}`);
+
+    document.querySelector("#message-text").addEventListener("keypress", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendMessageClicked();
+      }
+    });
+    document.querySelector("#username-text").addEventListener("keypress", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendMessageClicked();
+      }
+    });
+
+    async function listen() {
+      eventSource = new EventSource(`/openchat/api/v1/listen/${curRoom}`);
+      eventSource.onmessage = function (event) {
+        if (!gotFirstMsg) {
+          setTimeout(() => {
+            addSystemMessage("New features!\nTry using /help");
+          }, 1000);
+        }
+        gotFirstMsg = true;
+        resJson = JSON.parse(event.data);
+        console.log(resJson);
+        handleMsgs(resJson);
+      };
+    }
+
+    function addSystemMessage(message) {
+      let ms = [];
+      ms.push({ id: "empty" });
+      message.split("\n").forEach((m) => {
+        ms.push({
+          id: "internal",
+          content: m,
+        });
+      });
+      ms.push({ id: "empty" });
+      handleMsgs({ messages: ms });
+    }
+
+    async function handleMsgs(resJson) {
+      await resJson.messages.forEach(async (msg) => {
+        var elem = await document.getElementById("messages");
+        var chatbox = await document.getElementById("chatBox");
+        let idUsed = false;
+        elem.childNodes.forEach((m) => {
+          if (m.msgId == msg.id) {
+            idUsed = true;
+          }
+        });
+
+        if (!idUsed || msg.id == "internal" || msg.id == "empty") {
+          let scrollAfterDone = false;
+          if (elem.scrollHeight - elem.scrollTop <= elem.clientHeight + 500) {
+            scrollAfterDone = true;
+          }
+
+          let msgEl = await document.createElement("span");
+          let msgElTime = await document.createElement("span");
+          let msgElAuthor = await document.createElement("span");
+          let msgElMsg = await document.createElement("span");
+          let replaceId;
+
+          if (msg.relation && msg.relation.rel_type == "m.replace") {
+            replaceId = msg.relation.event_id;
+            function finder(nodes, condition) {
+              let match;
+              nodes.forEach(child => {
+                if (condition(child))
+                  match = child;
+              });
+              return match;
+            };
+            msgEl = finder(elem.childNodes, m => m.msgId == replaceId);
+            msgElTime = finder(msgEl.childNodes, c => c.type == "time");
+            msgElAuthor = finder(msgEl.childNodes, c => c.type == "author");
+            msgElMsg = finder(msgEl.childNodes, c => c.type == "message");
+          }
+
+          msgElTime.innerHTML = `[${new Date(msg.time).toLocaleString()}] `;
+          msgElTime.style.color = "blue";
+          msgElTime.type = "time";
+          msgElAuthor.innerHTML = msg.authorId;
+          msgElAuthor.style.color = msg.authorColor || "green";
+          msgElAuthor.style["word-break"] = "break-word";
+          msgElAuthor.type = "author";
+          msgElMsg.innerHTML = `: ${msg.content}`;
+          msgElMsg.style.color = "black";
+          msgElMsg.style["word-break"] = "break-word";
+          msgElMsg.type = "message";
+          //msgEl.style["text-align"] = "center";
+          msgEl.msgId = replaceId || msg.id;
+          msgEl.ip = msg.ip;
+
+          for (let m of document.querySelector("#messages").children) {
+            let mAuthor = m.children[1];
+            if (m.ip == msgEl.ip && m.ip) {
+              mAuthor.innerHTML = msg.authorId;
+              mAuthor.style.color = msg.authorColor || "green";
+            }
+          }
+
+          if (msg.id == "internal") {
+            msgElMsg.innerHTML = msg.content;
+            msgElMsg.style.color = "green";
+            msgEl.appendChild(msgElMsg);
+            document.querySelector("#messages").appendChild(msgEl);
+          } else if (msg.id == "empty") {
+            msgElMsg.innerHTML = "---";
+            msgElMsg.style.color = "white";
+            msgEl.appendChild(msgElMsg);
+            document.querySelector("#messages").appendChild(msgEl);
+          } else if (msg.announcement) {
+            msgElMsg.innerHTML = msg.content;
+            msgElMsg.style.color = "orange";
+            msgEl.appendChild(msgElTime);
+            msgEl.appendChild(msgElMsg);
+            document.querySelector("#messages").appendChild(msgEl);
+          } else if (replaceId) {
+
+          } else {
+            msgEl.appendChild(msgElTime);
+            msgEl.appendChild(msgElAuthor);
+            msgEl.appendChild(msgElMsg);
+            document.querySelector("#messages").appendChild(msgEl);
+          }
+          if (scrollAfterDone) {
+            elem.scrollTop = elem.scrollHeight;
+          }
+        }
+      });
+      return;
+    }
+
+    function setCookie(cname, cvalue, exdays) {
+      const d = new Date();
+      d.setTime(d.getTime() + exdays * 24 * 60 * 60 * 1000);
+      let expires = "expires=" + d.toUTCString();
+      document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+    }
+    function getCookie(cname) {
+      let name = cname + "=";
+      let decodedCookie = decodeURIComponent(document.cookie);
+      let ca = decodedCookie.split(";");
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == " ") {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+      return;
+    }
+    function pause(ms) {
+      return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+      });
+    }
+  </script>
+</body>
+
+</html>
