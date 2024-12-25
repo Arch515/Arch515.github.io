@@ -164,6 +164,8 @@
     setCookie("nameColor", nameColor, 9999);
     setCookie("id", id, 9999);
 
+    let endpoint = 'https://network.arch515.net:81/openchat/api';
+
     sendMessageClicked = async (text) => {
       let messageText = document.querySelector("#message-text").value.replace(/\s+$/, "") + " ";
       let username = document.querySelector("#username-text").value.replace(/\s+$/, "");
@@ -198,7 +200,7 @@
 
       if (messageText.startsWith("/room ") || messageText.startsWith("/r ")) {
         addSystemMessage(`Connecting to room...`);
-        let res = await fetch(`/openchat/api/v1/getRoom?` + new URLSearchParams({ id: messageText.split(" ")[1] }), {
+        let res = await fetch(`${endpoint}/v1/getRoom?` + new URLSearchParams({ id: messageText.split(" ")[1] }), {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -213,7 +215,7 @@
         if (!resJ.roomExists) {
           addSystemMessage(`Room does not exist, creating room...`);
           try {
-            let res2 = await fetch(`/openchat/api/v1/createRoom?` + new URLSearchParams({ id: messageText.split(" ")[1] }), {
+            let res2 = await fetch(`${endpoint}/v1/createRoom?` + new URLSearchParams({ id: messageText.split(" ")[1] }), {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -251,7 +253,7 @@
         return;
       }
       if (messageText.startsWith("/roomlist ") || messageText.startsWith("/rl ")) {
-        let res = await fetch(`/openchat/rooms.json`, {
+        let res = await fetch(`${endpoint}/v1/rooms.json`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -353,7 +355,7 @@
                     a();
                   });
                   xhr.addEventListener("abort", () => console.error("File upload aborted"));
-                  xhr.open("POST", `/openchat/api/v1/sendFile/${curRoom}/`, true);
+                  xhr.open("POST", `${endpoint}/v1/sendFile/${curRoom}/`, true);
                   xhr.setRequestHeader("fileName", file.name.replaceAll(/[^a-zA-Z0-9_\- .]/g, ''));
                   xhr.setRequestHeader("fileSize", file.size);
                   xhr.setRequestHeader("fileType", file.type);
@@ -394,7 +396,7 @@
       console.log(message);
       document.querySelector("#message-text").value = "";
       try {
-        let res = await fetch(`/openchat/api/v1/sendMessage/${curRoom}`, {
+        let res = await fetch(`${endpoint}/v1/sendMessage/${curRoom}`, {
           method: "POST",
           body: JSON.stringify(message),
           headers: {
@@ -416,6 +418,7 @@
       }
     };
 
+    console.log(window.location);
     sendMessageClicked(`/room ${window.location.pathname.split("/openchat/room/")[1] || "home"}`);
 
     document.querySelector("#message-text").addEventListener("keypress", function (event) {
@@ -432,7 +435,7 @@
     });
 
     async function listen() {
-      eventSource = new EventSource(`/openchat/api/v1/listen/${curRoom}`);
+      eventSource = new EventSource(`${endpoint}/v1/listen/${curRoom}`);
       eventSource.onmessage = function (event) {
         if (!gotFirstMsg) {
           setTimeout(() => {
