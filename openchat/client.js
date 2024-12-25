@@ -33,7 +33,7 @@ async function runNotifSw() {
 
   console.log('Sending push');
   console.log(subscription);
-  await fetch(`${endpoint}/subscribe/${curRoom}`, {
+  await fetch(`${endpoint}/subscribe/${curRoomName}`, {
     method: 'POST',
     body: JSON.stringify(subscription),
     headers: {
