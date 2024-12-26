@@ -301,7 +301,7 @@
               } else{
                 resJsonn.alteredTime = resJsonn.time;
               }
-              if(Math.abs(player.getCurrentTime() - resJsonn.alteredTime) >= 1 || !resJsonn.playing){
+              if(Math.abs(player.getCurrentTime() - resJsonn.alteredTime) >= 3 || !resJsonn.playing){
                 player.seekTo(resJsonn.alteredTime);
               };
               if(resJsonn.playing){
