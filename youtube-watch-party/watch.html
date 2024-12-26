@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>YouTube Watch Party</title>
+  <meta content="Join This YouTube Watch Party" property="og:title"/>
+  <meta content="{{desc}}" property="og:description"/>
+  <meta name="purpleads-verification" content="9d39febd03e24c0e4b1970e3"/>
+</head>
+
+<style>
+  html, body {
+    height: 100%;
+    width: device-width;
+    background: linear-gradient(0deg, rgba(3,121,113,1) 15%, rgba(255,66,249,1) 100%);
+  }
+  
+  body {
+    overflow: hidden;
+  }
+
+  #all {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 100%;
+    width: 100%;
+    gap: 1%;
+  }
+  
+  #player {
+    margin: auto;
+  }
+
+  #host-controls {
+    display: flex;
+    width: 99%;
+    gap: 6px;
+    max-width: 700px;
+    margin: auto;
+  }
+
+  #left-text {
+    color: black;
+    text-align: center;
+    flex-basis: 180px;
+  }
+
+  #new-video {
+    background-color: #a6a6a6;
+    color: black;
+    border: 2px solid gray;
+    border-radius: 8px;
+    transition-duration: 0.4s;
+    text-align: center;
+    flex-basis: 100%;
+  }
+
+  #right-button {
+    background-color: #a6a6a6;
+    color: black;
+    border: 2px solid gray;
+    border-radius: 8px;
+    transition-duration: 0.4s;
+    text-align: center;
+    flex-basis: 140px;
+  }
+
+  #user-count {
+    text-align: center;
+    flex-basis: 15px;
+  }
+  
+  #chatBox {
+    display: flex;
+    width: 99%;
+    gap: 6px;
+    flex-direction: column;
+    max-width: 1000px;
+    margin: auto;
+  }
+
+  #messages {
+    display: flex;
+    width: 99%;
+    gap: 1px;
+    flex-direction: column;
+    overflow: auto;
+    max-height: 200px;
+  }
+
+  #send-message {
+    display: flex;
+    width: 100%;
+    gap: 6px;
+  }
+
+  #message-text {
+    background-color: #a6a6a6;
+    color: black;
+    border: 2px solid gray;
+    border-radius: 8px;
+    transition-duration: 0.4s;
+    text-align: center;
+    flex-basis: 100%;
+  }
+
+  #username-text {
+    background-color: #a6a6a6;
+    color: black;
+    border: 2px solid gray;
+    border-radius: 8px;
+    transition-duration: 0.4s;
+    text-align: center;
+    flex-basis: 100%;
+  }
+
+  #send-message-button {
+    background-color: #a6a6a6;
+    color: black;
+    border: 2px solid gray;
+    border-radius: 8px;
+    transition-duration: 0.4s;
+    text-align: center;
+  }
+</style>
+  
+  <body>
+    <script src="/banger.js" type="text/javascript"></script>
+    <script type="text/javascript">
+      if(!document.getElementById('IgcfSqAvYstow')){
+        location.href = `/adblock`;
+      };
+    </script>
+    
+    <div id="all">
+      <div style="margin: auto; max-width: 100%;">
+        <script data-cfasync='false' type='text/javascript' src='//p452253.clksite.com/adServe/banners?tid=452253_885260_0'></script>
+      </div>
+      <strong id="user-count">loading...</strong>
+      <div id="host-controls">
+        <strong id="left-text">New Video Url: </strong>
+        <input type="text" id="new-video"></input>
+        <button id="right-button" onclick="changeVideoClicked()">Change Video</button>
+      </div>
+      <div id="player"></div>
+      <div id="chatBox">
+        <div id="messages"></div>
+        <div id="send-message">
+          <strong id="left-text">username: </strong>
+          <input type="text" id="username-text"></input>
+        </div>
+        <div id="send-message">
+          <strong id="left-text">message: </strong>
+          <input type="text" id="message-text"></input>
+        </div>
+        <button id="send-message-button" onclick="sendMessageClicked()">Send Message</button>
+      </div>
+      <strong id="empty"></strong>
+    </div>
+
+    <script>
+      let changeVideoClicked;
+      let sendMessageClicked;
+      let videoTitle;
+      let userId;
+      let messagesUsed = [];
+      var tag = document.createElement('script');
+      var partyId = window.location.search.split("?party=")[1]
+      const userCount = document.querySelector("#user-count");
+
+      let endpoint = 'https://network.arch515.net:81/ytparty/api';
+
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      
+      async function onYouTubeIframeAPIReady() {
+        var ress = await fetch(`${endpoint}/createUser/${partyId}`, {method: 'POST'});
+        var jsonn = await ress.json();
+        userId = jsonn.user;
+        var response = await fetch(`${endpoint}/getPartyInfo/${partyId}/${userId}`);
+        var resJson = await response.json();
+        player = new YT.Player('player', {
+          height: '95%',
+          width: '95%',
+          videoId: resJson.videoId,
+          allowfullscreen: 0,
+          playerVars: {
+            'playsinline': 1,
+            'controls': 1
+          },
+          events: {
+            'onReady': onPlayerReady
+          }
+        });
+
+        changeVideoClicked = async() => {
+          const urlInput = document.querySelector("#new-video");
+          var regExp = /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/;
+          var match = urlInput.value.match(regExp);
+          urlInput.value = '';
+          await player.loadVideoById(match[1]);
+          videoTitle = document.querySelector("#player").title;
+        };
+        document.querySelector("#new-video").addEventListener("keypress", function(event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            changeVideoClicked();
+          };
+        });
+
+        sendMessageClicked = async() => {
+          const messageText = document.querySelector("#message-text").value;
+          const username = document.querySelector("#username-text").value;
+          
+          const message = {
+            author: username,
+            content: messageText
+          };
+
+          fetch(`${endpoint}/sendMessage/${partyId}/${userId}`, {
+            method: 'POST',
+            body: JSON.stringify(message),
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          document.querySelector("#message-text").value = '';
+          document.querySelector("#username-text").setAttribute('locked', true);
+          console.log(document.querySelector("#username-text"));
+        };
+        document.querySelector("#message-text").addEventListener("keypress", function(event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            sendMessageClicked();
+          };
+        });
+        document.querySelector("#username-text").addEventListener("keypress", function(event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            sendMessageClicked();
+          };
+        });
+      }
+
+      async function onPlayerReady(event) {
+        let response = await fetch(`${endpoint}/getPartyInfo/${partyId}/${userId}`);
+        var resJson = await response.json();
+        
+        if(Math.abs(player.getCurrentTime() - resJson.time) >= 20 || !resJson.playing){
+          player.seekTo(resJson.time);
+        };
+        if(resJson.playing){
+          player.playVideo();
+        } else{
+          player.pauseVideo();
+        };
+        if(player.getVideoUrl().split('v=')[1] != resJson.videoId){
+          player.loadVideoById(resJson.videoId);
+        };
+        videoTitle = document.querySelector("#player").title;
+        if(!resJson.err){
+          if(resJson.ownerClaimed){
+            const hostControls = document.querySelector("#host-controls");
+            const all = document.querySelector("#all");
+            all.removeChild(hostControls);
+
+            let eventSource = new EventSource(`${endpoint}/listen/${partyId}/${userId}`);
+            let resJsonn = {
+              time: 0,
+              playing: false,
+              videoId: player.getVideoUrl().split('v=')[1],
+              userCount: -1,
+              videoTitle: 'loading...',
+              recTime: Date.now()
+            };
+
+            let gotFirstMsg = false;
+            eventSource.onmessage = function(event) {
+              gotFirstMsg = true;
+              resJsonn = JSON.parse(event.data);
+              resJsonn.recTime = Date.now();
+              console.log(resJsonn);
+
+              if(resJsonn.err){
+                location.reload();
+              };
+              if(!resJsonn.ownerClaimed){
+                location.reload();
+              };
+              handleMsgs(resJsonn);
+            };
+            setInterval(function(){
+              if(Math.abs(resJsonn.recTime - Date.now() && gotFirstMsg) >= 7000){
+                location.reload();
+              };
+              if(resJsonn.playing){
+                resJsonn.alteredTime = resJsonn.time;
+              } else{
+                resJsonn.alteredTime = resJsonn.time;
+              }
+              if(Math.abs(player.getCurrentTime() - resJsonn.alteredTime) >= 1 || !resJsonn.playing){
+                player.seekTo(resJsonn.alteredTime);
+              };
+              if(resJsonn.playing){
+                player.playVideo();
+              } else{
+                player.pauseVideo();
+              };
+              if(player.getVideoUrl().split('v=')[1] != resJsonn.videoId){
+                console.log(resJson.videoId);
+                player.loadVideoById(resJson.videoId);
+              };
+              userCount.innerHTML = `People in this party: ${resJsonn.userCount || 'loading...'}`;
+              document.title = `Watching "${resJsonn.videoTitle}" with ${resJsonn.userCount - 1} other ${resJsonn.userCount - 1 == 1 ? 'person' : 'people'}`;
+            }, 100);
+          } else{
+            setInterval(async function (){
+              try{
+                await fetch(`${endpoint}/setVideoInfo/${partyId}/${userId}`, {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    playing: player.getPlayerState() == 1,
+                    time: player.getCurrentTime(),
+                    videoId: player.getVideoUrl().split('v=')[1],
+                    videoTitle: videoTitle
+                  }),
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                });
+                let response = await fetch(`${endpoint}/getPartyInfo/${partyId}/${userId}`);
+                var resJson = await response.json();
+                userCount.innerHTML = `People in this party: ${resJson.userCount || 'loading...'}`;
+                document.title = `Watching "${resJson.videoTitle}" with ${resJson.userCount - 1} other ${resJson.userCount - 1 == 1 ? 'person' : 'people'}`;
+                handleMsgs(resJson);
+              } catch{};
+            }, 2000);
+          };
+        };
+      };
+
+      async function handleMsgs(resJson) {
+        resJson.messages.forEach(async msg =>{
+          if(!messagesUsed.includes(msg.id)){
+            var elem = await document.getElementById('messages');
+            
+            let scrollAfterDone = false;
+            if(elem.scrollHeight - elem.scrollTop <= 200){
+              scrollAfterDone = true;
+            };
+            
+            await messagesUsed.push(msg.id);
+            let msgEl = await document.createElement("strong");
+            let msgElTime = await document.createElement("strong");
+            let msgElAuthor = await document.createElement("strong");
+            let msgElMsg = await document.createElement("strong");
+            msgElMsg.innerHTML = `: ${msg.content}`;
+            msgElTime.innerHTML = `[${new Date(msg.time).toLocaleString()}] `;
+            msgElAuthor.innerHTML = resJson.users[msg.authorId].username;
+            msgElTime.style.color = 'blue';
+            msgElAuthor.style.color = 'green';
+            msgElAuthor.style['word-break'] = 'break-all';
+            msgElMsg.style.color = 'black';
+            msgElMsg.style['word-break'] = 'break-all';
+            msgEl.style['text-align'] = "center";
+            msgEl.authorId = msg.authorId;
+                    
+            await msgEl.appendChild(msgElTime);
+            await msgEl.appendChild(msgElAuthor);
+            await msgEl.appendChild(msgElMsg);
+            await document.querySelector("#messages").appendChild(msgEl);
+            /*if(elem.scrollHeight - elem.scrollTop <= 500){
+              elem.scrollTop = elem.scrollHeight;
+            } else{
+              await console.log(elem.scrollHeight - elem.scrollTop);
+            };*/
+            if(scrollAfterDone){
+              elem.scrollTop = elem.scrollHeight;
+            };
+          };
+        });
+        for (let msgEl of document.querySelector("#messages").children) {
+          let msgElAuthor = msgEl.children[1];
+          msgElAuthor.innerHTML = resJson.users[msgEl.authorId].username;
+        };
+      };
+    </script>
+  </body>
+
+</html>

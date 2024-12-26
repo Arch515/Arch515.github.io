@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Create a YouTube Watch Party.</title>
+  <meta content="Create a YouTube Watch Party." property="og:title"/>
+  <meta content="Watch a YouTube video with your friends online." property="og:description"/>
+  <meta content="https://youtube-watch-party-node.thesmasher.repl.co" property="og:url"/>
+  <style>
+    html, body {
+      height: 100%;
+      width: device-width;
+      background: linear-gradient(0deg, rgba(3,121,113,1) 15%, rgba(255,66,249,1) 100%);
+    }
+
+    .submitButton {
+      background-color: #a6a6a6;
+      color: black;
+      border: 2px solid gray;
+      border-radius: 8px;
+      transition-duration: 0.4s;
+      text-align: center;
+    }
+
+    .submitButton:hover {
+      background-color: #949494;
+    }
+
+    .header {
+      text-align: center;
+    }
+
+    .email-stuff {
+      display: flex;
+    }
+
+    .email-inType {
+      color: black;
+      text-align: center;
+      flex-basis: 85px;
+    }
+
+    .user-input {
+      background-color: #a6a6a6;
+      color: black;
+      border: 2px solid gray;
+      border-radius: 8px;
+      transition-duration: 0.4s;
+      text-align: center;
+      flex-basis: 100%;
+    }
+
+    .all {
+      display: flex;
+      top: 30%;
+      flex-direction: column;
+      position: relative;
+      gap: 6px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .finishedText {
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="/banger.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    if(!document.getElementById('IgcfSqAvYstow')){
+      location.href = `/adblock`;
+    };
+  </script>
+  <div class="all">
+    <h1 class="header">Create a YouTube Watch Party.</h1>
+    <div class="email-stuff">
+      <strong class="email-inType">video url: </strong>
+      <input type="text" class="user-input"></input>
+    </div>
+    <script>
+      let endpoint = 'https://network.arch515.net:81/ytparty/api';
+        async function submitButtonClicked() {
+          const emailInput = document.querySelector(".user-input");
+          const passInput = document.querySelector(".pass-input");
+          const button = document.querySelector(".submitButton");
+          const finishedText = document.querySelector(".finishedText");
+
+          var regExp = /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/;
+          var match = emailInput.value.match(regExp);
+          
+          var reqBody = JSON.stringify({
+            "video": match[1]
+          });
+          finishedText.innerHTML = 'loading...';
+          try {
+            let response = await fetch(`${endpoint}/createParty`, {
+              method: 'POST',
+              body: reqBody,
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            let json = await response.json();
+            
+            if (response.status == 200) {
+              finishedText.innerHTML = json.link;
+              finishedText.href = json.link;
+              location.href = json.link;
+            }
+            else {
+              finishedText.innerHTML = 'failed';
+            };
+          }
+          catch(err){
+            finishedText.innerHTML = 'failed';
+            console.log(err);
+            finishedText.innerHTML = err;
+          };
+        };
+      </script>
+    <button class="submitButton" onclick="submitButtonClicked()">Start</button>
+    <a class="finishedText"></a>
+    <div style="margin: auto; max-width: 100%;">
+      <script data-cfasync='false' type='text/javascript' src='//p452253.clksite.com/adServe/banners?tid=452253_885260_0'></script>
+    </div>
+  </div>
+</body>
+
+</html>
