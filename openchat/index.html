@@ -141,7 +141,7 @@
 
 <body>
   <div id="all">
-    <noscript>JavaScript is disabled.</noscript>
+    <noscript>JavaScript is required. Please turn it on.</noscript>
     <div id="chatBox">
       <div id="messages"></div>
       <div id="send-message">
@@ -508,7 +508,7 @@
             msgElMsg = finder(msgEl.childNodes, c => c.type == "message");
           }
 
-          msgElTime.innerHTML = `[${new Date(msg.time).toLocaleString()}]&nbsp;`;
+          msgElTime.innerHTML = `[${new Date(msg.time).toLocaleString().replace(' ', '&nbsp;')}] `;
           msgElTime.style.color = "blue";
           msgElTime.type = "time";
           msgElAuthor.innerHTML = msg.authorId;
@@ -560,6 +560,7 @@
             msgEl.appendChild(msgElMsg);
             document.querySelector("#messages").appendChild(msgEl);
           }
+          msgEl.appendChild(document.createElement('br'));
           if (scrollAfterDone) {
             elem.scrollTop = elem.scrollHeight;
           }
