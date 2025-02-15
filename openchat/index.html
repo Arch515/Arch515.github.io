@@ -443,11 +443,11 @@
     async function listen() {
       eventSource = new EventSource(`${endpoint}/v1/listen/${curRoom}`);
       eventSource.onmessage = function (event) {
-        if (!gotFirstMsg) {
+        /*if (!gotFirstMsg) {
           setTimeout(() => {
             addSystemMessage("New features!\nTry using /help");
           }, 1000);
-        }
+        }*/
         gotFirstMsg = true;
         resJson = JSON.parse(event.data);
         console.log(resJson);
