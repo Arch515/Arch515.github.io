@@ -463,6 +463,7 @@
     }
 
     async function handleMsgs(resJson) {
+      let prevMsg;
       await resJson.messages.forEach(async (msg) => {
         var elem = await document.getElementById("messages");
         var chatbox = await document.getElementById("chatBox");
@@ -501,7 +502,7 @@
             msgElMsg = finder(msgEl.childNodes, c => c.type == "message");
           }
 
-          msgElTime.innerHTML = `[${new Date(msg.time).toLocaleString()}] `;
+          msgElTime.innerHTML = `[${new Date(msg.time).toLocaleString()}]&nbsp;`;
           msgElTime.style.color = "blue";
           msgElTime.type = "time";
           msgElAuthor.innerHTML = msg.authorId;
@@ -524,6 +525,11 @@
             }
           }
 
+          if (prevMsg && msg.time - prevMsg.time >= 3600000 * 2) {
+            document.querySelector("#messages").appendChild(document.createElement('hr'));
+          }
+          prevMsg = msg;
+
           if (msg.id == "internal") {
             msgElMsg.innerHTML = msg.content;
             msgElMsg.style.color = "green";
@@ -535,7 +541,7 @@
             msgEl.appendChild(msgElMsg);
             document.querySelector("#messages").appendChild(msgEl);
           } else if (msg.announcement) {
-            msgElMsg.innerHTML = msg.content;
+            msgElMsg.innerHTML = `Announcement: ${msg.content}`;
             msgElMsg.style.color = "orange";
             msgEl.appendChild(msgElTime);
             msgEl.appendChild(msgElMsg);
