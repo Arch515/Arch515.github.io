@@ -531,7 +531,7 @@
             }
           }
 
-          if (prevMsg && msg.time - prevMsg.time >= 3600000) {
+          if (prevMsg && msg.time - prevMsg.time >= 3600000*1.5) {
             document.querySelector("#messages").appendChild(document.createElement('hr'));
           }
           prevMsg = msg;
