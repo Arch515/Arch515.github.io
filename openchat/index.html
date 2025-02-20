@@ -541,17 +541,20 @@
             msgElMsg.style.color = "green";
             msgEl.appendChild(msgElMsg);
             document.querySelector("#messages").appendChild(msgEl);
+            msgEl.appendChild(document.createElement('br'));
           } else if (msg.id == "empty") {
             msgElMsg.innerHTML = "---";
             msgElMsg.style.color = "white";
             msgEl.appendChild(msgElMsg);
             document.querySelector("#messages").appendChild(msgEl);
+            msgEl.appendChild(document.createElement('br'));
           } else if (msg.announcement) {
             msgElMsg.innerHTML = `Announcement: ${msg.content}`;
             msgElMsg.style.color = "orange";
             msgEl.appendChild(msgElTime);
             msgEl.appendChild(msgElMsg);
             document.querySelector("#messages").appendChild(msgEl);
+            msgEl.appendChild(document.createElement('br'));
           } else if (replaceId) {
 
           } else {
@@ -559,8 +562,9 @@
             msgEl.appendChild(msgElAuthor);
             msgEl.appendChild(msgElMsg);
             document.querySelector("#messages").appendChild(msgEl);
+            msgEl.appendChild(document.createElement('br'));
           }
-          msgEl.appendChild(document.createElement('br'));
+          msgElMsg.innerHTML = msgElMsg.innerHTML.replaceAll('\n', '<br>');
           if (scrollAfterDone) {
             elem.scrollTop = elem.scrollHeight;
           }
