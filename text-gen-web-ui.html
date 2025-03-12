@@ -13,14 +13,36 @@
 
     iframe {
       border: none;
-      height: 100%;
+      height: calc(100% - 26px);
       width: 100%;
     }
   </style>
 </head>
 
 <body>
-  <iframe src="https://network.arch515.net:7860/">
+  <noscript>JavaScript is required. Please turn it on.</noscript>
+  <a id="link" href="https://network.arch515.net:7862/">network.arch515.net:7862</a>
+  <button id="delete-link" onclick="deleteLink()">X</button>
+  <iframe id="frame" src="https://network.arch515.net:7862/"></iframe>
+  <script>
+    let frame = document.querySelector("#frame");
+    let link = document.querySelector("#link");
+    let deleteButton = document.querySelector("#delete-link");
+
+    let replace = '7862';
+    let replaceWith = '7860';
+    fetch(frame.src).catch(error => {
+      link.href = link.href.replace(replace, replaceWith);
+      link.innerHTML = link.innerHTML.replace(replace, replaceWith);
+      frame.src = frame.src.replace(replace, replaceWith);
+    });
+
+    function deleteLink() {
+      link.remove();
+      deleteButton.remove();
+      frame.style.height = '100%';
+    }
+  </script>
 </body>
 
 </html>
